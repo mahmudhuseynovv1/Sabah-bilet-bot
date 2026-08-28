@@ -10,48 +10,51 @@ CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 WORDS = ["sabah", "barcelona", "barselona"]
 
 headers = {
-    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Safari/604.1"
+    "User-Agent": "Mozilla/5.0"
 }
 
-response = requests.get(URL, headers=headers, timeout=30)
-response.raise_for_status()
+try:
+    response = requests.get(URL, headers=headers, timeout=30)
+    response.raise_for_status()
 
-soup = BeautifulSoup(response.text, "html.parser")
+    soup = BeautifulSoup(response.text, "html.parser")
 
-# Səhifədəki bütün görünən mətn
-text = soup.get_text(" ", strip=True).lower()
+    text = soup.get_text(" ", strip=True).lower()
 
-# Linklərdə də axtar
-links_text = " ".join(
-    (a.get_text(" ", strip=True) + " " + (a.get("href") or ""))
-    for a in soup.find_all("a")
-).lower()
+    links_text = " ".join(
+        (a.get_text(" ", strip=True) + " " + (a.get("href") or ""))
+        for a in soup.find_all("a")
+    ).lower()
 
-all_text = text + " " + links_text
+    all_text = text + " " + links_text
 
-found = []
+    found = [word for word in WORDS if word in all_text]
 
-for word in WORDS:
-    if word in all_text and word not in found:
-        found.append(word)
+    if found:
+        message = (
+            "🎟️ BİLET VAR ✅\n\n"
+            f"🔎 Tapılan söz: {', '.join(found)}\n\n"
+            f"🔗 {URL}"
+        )
+    else:
+        message = (
+            "HƏLƏKİ BİLET YOXDUR ❌\n\n"
+            "Növbəti yoxlama avtomatik olacaq."
+        )
 
-if found:
+except Exception as e:
     message = (
-        "🚨 ITICKET-DƏ YENİLİK!\n\n"
-        f"🔎 Tapılan söz: {', '.join(found)}\n\n"
-        "🎟️ iTicket Sport səhifəsində tapıldı.\n\n"
-        f"🔗 {URL}"
+        "⚠️ YOXlama zamanı xəta oldu.\n\n"
+        f"{type(e).__name__}: {e}"
     )
 
-    requests.post(
-        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-        data={
-            "chat_id": CHAT_ID,
-            "text": message
-        },
-        timeout=30
-    )
+requests.post(
+    f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+    data={
+        "chat_id": CHAT_ID,
+        "text": message
+    },
+    timeout=30
+)
 
-    print("Bildiriş göndərildi:", found)
-else:
-    print("Sabah / Barcelona / Barselona tapılmadı.")
+print(message)
